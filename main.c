@@ -19,7 +19,7 @@
 // ADC Configuration
 #define ADC_SHT		ADC10SHT_3	// Long s&h time
 #define ADC_SR		ADC10SR		// Rate limited
-#define ADC_DIV		ADC10DIV_2	// --^
+#define ADC_DIV		ADC10DIV_4	// --^
 
 // Accelerometer Configuration (Per Dice Adjustment)
 #define ACC_TRESH	20
@@ -40,7 +40,8 @@
 #define LED_BLINK_DELAY	1000	// Led blinking delay after rolling
 #define LED_BLINK_RISE	400
 #define LED_BLINK_FALL	400
-#define SEQ_TIME		1500	// Time to complete each step of the poweron sequence
+#define SEQ_TIMEMIN		800		// Time that each step needs to be hold
+#define SEQ_TIMEOUT		2000	// Time to complete each step of the poweron sequence
 #define POWEROFF		15000	// Time before power off
 #define RESET			5000	// Time before going to idle
 #define ROLLING			300		// Time inbetween face changes to consider as roll
@@ -284,16 +285,23 @@ int main() {
 		case OFF:
 			ledOff();
 			lowpEnable();
+			timer[5] = 0;
 			state++;
 			break;
 
 		case POWERON_SEQ_1:
-			if (face == 0) state++;
+			if (face == 0) {
+				state++;
+				timer[5] = 0;
+			}
 			break;
 
 		case POWERON_SEQ_2:
-			if (face == 1) state++;
-			if (wait(SEQ_TIME, 5)) state = POWERON_SEQ_1;
+			if (face == 1) {
+				state++;
+				timer[5] = 0;
+			}
+			if (timer[5] > SEQ_TIMEOUT) state = POWERON_SEQ_1;
 			break;
 
 		case POWERON_SEQ_3:
@@ -306,7 +314,7 @@ int main() {
 				waitReset(5);
 				state = ON;
 			}
-			if (wait(SEQ_TIME, 5)) state = POWERON_SEQ_1;
+			if (timer[5] > SEQ_TIMEOUT) state = POWERON_SEQ_1;
 			break;
 
 		case ON:
